@@ -11,73 +11,50 @@ using Xunit;
 
 namespace Microsoft.AspNet.Mvc.IntegrationTests
 {
-    public class TryUpdateModelIntegrationTest
+    public class ActionParameterIntegrationTest
     {
         private class Address
         {
             public string Street { get; set; }
         }
 
+
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ExistingModel_EmptyPrefix_GetsOverWritten()
+        public async Task ActionParameter_CollectionModel_EmptyPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(List<Address>)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Address { Street = "DefaultStreet" };
-            var oldModel = model;
 
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.Same(oldModel, model);
-            Assert.Equal("SomeStreet", model.Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<List<Address>>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Count);
+            Assert.Equal("SomeStreet", boundModel[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
 
             Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Street");
-            Assert.NotNull(modelState[key].Value);
-            Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
-            Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
-            Assert.Empty(modelState[key].Errors);
-            Assert.Equal(ModelValidationState.Valid, modelState[key].ValidationState);
-        }
-
-        [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ExistingModel_EmptyPrefix_GetsBound()
-        {
-            // Arrange
-            var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
-            {
-                request.QueryString = new QueryString("Street", "SomeStreet");
-            });
-
-            var modelState = new ModelStateDictionary();
-            var model = new Address();
-            // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
-
-            // Assert
-            Assert.True(result);
-
-            // Model
-            Assert.Equal("SomeStreet", model.Street);
-
-            // ModelState
-            Assert.True(modelState.IsValid);
-
-            Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Street");
+            var key = Assert.Single(modelState.Keys, k => k == "[0].Street");
             Assert.NotNull(modelState[key].Value);
             Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
             Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
@@ -91,32 +68,41 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_SettableCollectionModel_EmptyPrefix_GetsBound()
+        public async Task ActionParameter_SettableCollectionModel_EmptyPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(Person2)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Address[0].Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person2();
+
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count);
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person2>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count);
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
 
             Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Address[0].Street");
+            var key = Assert.Single(modelState.Keys, k => k == "[0].Street");
             Assert.NotNull(modelState[key].Value);
             Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
             Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
@@ -135,32 +121,42 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_NonSettableCollectionModel_EmptyPrefix_GetsBound()
+        public async Task ActionParameter_NonSettableCollectionModel_EmptyPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(Person3)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Address[0].Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
             var model = new Person3();
+
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count);
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person3>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count);
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
 
             Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Address[0].Street");
+            var key = Assert.Single(modelState.Keys, k => k == "[0].Street");
             Assert.NotNull(modelState[key].Value);
             Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
             Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
@@ -174,27 +170,36 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ReadOnlyCollectionModel_EmptyPrefix_DoesNotGetBound()
+        public async Task ActionParameter_ReadOnlyCollectionModel_EmptyPrefix_DoesNotGetBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(Person6)
+            };
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Address[0].Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person6();
+
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
+            var boundModel = Assert.IsType<Person6>(modelBindingResult.Model);
+            Assert.NotNull(boundModel);
+            Assert.NotNull(boundModel.Address);
 
             // Arrays should not be updated.
-            Assert.Equal(0, model.Address.Count());
+            Assert.Equal(0, boundModel.Address.Count());
 
             // ModelState
             Assert.True(modelState.IsValid);
@@ -207,32 +212,41 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_SettableArrayModel_EmptyPrefix_GetsBound()
+        public async Task ActionParameter_SettableArrayModel_EmptyPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(Person4)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Address[0].Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
             var model = new Person4();
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count());
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person4>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count());
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
 
             Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Address[0].Street");
+            var key = Assert.Single(modelState.Keys, k => k == "[0].Street");
             Assert.NotNull(modelState[key].Value);
             Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
             Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
@@ -246,122 +260,75 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_NonSettableArrayModel_EmptyPrefix_GetsBound()
+        public async Task ActionParameter_NonSettableArrayModel_EmptyPrefix_DoesNotGetBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                ParameterType = typeof(Person5)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
-                request.QueryString = new QueryString("Address[0].Street", "SomeStreet");
+                request.QueryString = new QueryString("[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person5();
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person5>(modelBindingResult.Model);
+            Assert.NotNull(boundModel.Address);
 
             // Arrays should not be updated.
-            Assert.Equal(0, model.Address.Count());
+            Assert.Equal(0, boundModel.Address.Count());
 
             // ModelState
             Assert.True(modelState.IsValid);
             Assert.Empty(modelState.Keys);
         }
 
-
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ExistingModel_WithPrefix_GetsOverWritten()
+        public async Task ActionParameter_SettableCollectionModel_WithPrefix_GetsBound()
         {
             // Arrange
-            var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
             {
-                request.QueryString = new QueryString("prefix.Street", "SomeStreet");
-            });
-
-            var modelState = new ModelStateDictionary();
-            var model = new Address { Street = "DefaultStreet" };
-            var oldModel = model;
-
-            // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
-
-            // Assert
-            Assert.True(result);
-
-            // Model
-            Assert.Same(oldModel, model);
-            Assert.Equal("SomeStreet", model.Street);
-
-            // ModelState
-            Assert.True(modelState.IsValid);
-
-            Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "prefix.Street");
-            Assert.NotNull(modelState[key].Value);
-            Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
-            Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
-            Assert.Empty(modelState[key].Errors);
-            Assert.Equal(ModelValidationState.Valid, modelState[key].ValidationState);
-        }
-
-        [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ExistingModel_WithPrefix_GetsBound()
-        {
-            // Arrange
-            var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
-            {
-                request.QueryString = new QueryString("prefix.Street", "SomeStreet");
-            });
-
-            var modelState = new ModelStateDictionary();
-            var model = new Address();
-            // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
-
-            // Assert
-            Assert.True(result);
-
-            // Model
-            Assert.Equal("SomeStreet", model.Street);
-
-            // ModelState
-            Assert.True(modelState.IsValid);
-
-            Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "prefix.Street");
-            Assert.NotNull(modelState[key].Value);
-            Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
-            Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
-            Assert.Empty(modelState[key].Errors);
-            Assert.Equal(ModelValidationState.Valid, modelState[key].ValidationState);
-        }
-
-        [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_SettableCollectionModel_WithPrefix_GetsBound()
-        {
-            // Arrange
+                Name = "Address",
+                BindingInfo = new BindingInfo()
+                {
+                    BinderModelName = "prefix"
+                },
+                ParameterType = typeof(Person2)
+            };
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
                 request.QueryString = new QueryString("prefix.Address[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person2();
+
             // Act
-            var result = await TryUpdateModel(model, string.Empty, operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count);
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person2>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count);
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
@@ -376,26 +343,39 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_NonSettableCollectionModel_WithPrefix_GetsBound()
+        public async Task ActionParameter_NonSettableCollectionModel_WithPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                BindingInfo = new BindingInfo()
+                {
+                    BinderModelName = "prefix"
+                },
+                ParameterType = typeof(Person3)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
                 request.QueryString = new QueryString("prefix.Address[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person3();
+
             // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count);
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person3>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count);
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
@@ -410,27 +390,40 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_ReadOnlyCollectionModel_WithPrefix_DoesNotGetBound()
+        public async Task ActionParameter_ReadOnlyCollectionModel_WithPrefix_DoesNotGetBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                BindingInfo = new BindingInfo
+                {
+                    BinderModelName = "prefix"
+                },
+                ParameterType = typeof(Person6)
+            };
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
                 request.QueryString = new QueryString("prefix.Address[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person6();
+
             // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
+            var boundModel = Assert.IsType<Person6>(modelBindingResult.Model);
+            Assert.NotNull(boundModel);
+            Assert.NotNull(boundModel.Address);
 
             // Arrays should not be updated.
-            Assert.Equal(0, model.Address.Count());
+            Assert.Equal(0, boundModel.Address.Count());
 
             // ModelState
             Assert.True(modelState.IsValid);
@@ -438,32 +431,45 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_SettableArrayModel_WithPrefix_GetsBound()
+        public async Task ActionParameter_SettableArrayModel_WithPrefix_GetsBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                BindingInfo = new BindingInfo()
+                {
+                    BinderModelName = "prefix"
+                },
+                ParameterType = typeof(Person4)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
                 request.QueryString = new QueryString("prefix.Address[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person4();
+
             // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
 
             // Assert
-            Assert.True(result);
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
-            Assert.Equal(1, model.Address.Count());
-            Assert.Equal("SomeStreet", model.Address[0].Street);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person4>(modelBindingResult.Model);
+            Assert.Equal(1, boundModel.Address.Count());
+            Assert.Equal("SomeStreet", boundModel.Address[0].Street);
 
             // ModelState
             Assert.True(modelState.IsValid);
 
             Assert.Equal(1, modelState.Keys.Count);
-            var key = Assert.Single(modelState.Keys, k => k == "Address[0].Street");
+            var key = Assert.Single(modelState.Keys, k => k == "prefix.Address[0].Street");
             Assert.NotNull(modelState[key].Value);
             Assert.Equal("SomeStreet", modelState[key].Value.AttemptedValue);
             Assert.Equal("SomeStreet", modelState[key].Value.RawValue);
@@ -472,27 +478,39 @@ namespace Microsoft.AspNet.Mvc.IntegrationTests
         }
 
         [Fact(Skip = "Extra entries in model state dictionary. #2466")]
-        public async Task TryUpdateModel_NonSettableArrayModel_WithPrefix_DoesNotGetBound()
+        public async Task ActionParameter_NonSettableArrayModel_WithPrefix_DoesNotGetBound()
         {
             // Arrange
+            var argumentBinder = ModelBindingTestHelper.GetArgumentBinder();
+            var parameter = new ParameterDescriptor()
+            {
+                Name = "Address",
+                BindingInfo = new BindingInfo()
+                {
+                    BinderModelName = "prefix"
+                },
+                ParameterType = typeof(Person5)
+            };
+
             var operationContext = ModelBindingTestHelper.GetOperationBindingContext(request =>
             {
                 request.QueryString = new QueryString("prefix.Address[0].Street", "SomeStreet");
             });
 
             var modelState = new ModelStateDictionary();
-            var model = new Person5();
-            // Act
-            var result = await TryUpdateModel(model, "prefix", operationContext, modelState);
 
-            // Assert
-            Assert.True(result);
+            // Act
+            var modelBindingResult = await argumentBinder.BindModelAsync(parameter, modelState, operationContext);
+
+            Assert.NotNull(modelBindingResult);
+            Assert.True(modelBindingResult.IsModelSet);
 
             // Model
-            Assert.NotNull(model.Address);
+            Assert.NotNull(modelBindingResult.Model);
+            var boundModel = Assert.IsType<Person4>(modelBindingResult.Model);
 
             // Arrays should not be updated.
-            Assert.Equal(0, model.Address.Count());
+            Assert.Equal(0, boundModel.Address.Count());
 
             // ModelState
             Assert.True(modelState.IsValid);
